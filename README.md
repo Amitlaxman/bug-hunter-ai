@@ -73,3 +73,7 @@ WORKING_DIRECTORY	All file operations are relative to ./calculator
 tools[]	JSON schema describing available functions for the LLM
 function_map{}	Maps function names to actual Python functions
 messages[]	Conversation history that grows with each tool call
+
+
+
+https://github.com/cholakovit/bug-hunter-ai
