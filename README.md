@@ -21,7 +21,7 @@ An AI-powered agent for fixing bugs in IoT device code. The agent uses language 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/cholakovit/bug-hunter-ai.git
+git clone https://github.com/Amitlaxman/bug-hunter-ai.git
 cd bug-hunter-ai
 ```
 
