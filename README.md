@@ -156,6 +156,103 @@ python main.py "Fix the bug in temperature.py" --verbose
 uv run main.py "Fix the bug in temperature.py" --verbose
 ```
 
+---
+
+## C++ Bug Detection Pipeline
+
+An agentic system for **C++ (RDI) bug detection** that accepts code snippets, identifies the **exact line** where the bug first manifests, and outputs results in **CSV format (ID, Bug Line, Explanation)** with MCP-based documentation grounding.
+
+### Architecture
+
+- **Code Parsing Agent**: Structures code with line numbers for downstream agents.
+- **Bug Detection Agent**: Uses the LLM to decide if a bug exists and the first manifest line.
+- **MCP Doc Lookup Agent**: Calls the MCP server’s `search_documents` to retrieve relevant API/bug-pattern docs.
+- **Explanation Generation Agent**: Produces a short explanation **referencing** the retrieved MCP documentation.
+
+The pipeline runs: **Parse → MCP Lookup → Detect → Explain**, then writes CSV with columns **ID**, **Bug Line**, **Explanation**.
+
+### Prerequisites
+
+1. **MCP server** (for documentation grounding): run the server so `search_documents` is available.
+2. **LLM config**: same `.env` as above (`OPENAI_API_KEY`, `MODEL`, `API_PROVIDER`, etc.).
+
+### Run the MCP server
+
+From the project root:
+
+```bash
+cd server
+python mcp_server.py
+```
+
+The server listens on **port 8003** (SSE). Leave it running while using the pipeline.
+
+Optional: ingest bug patterns from `samples.csv` into the server’s index (run once):
+
+```bash
+python server/ingest_from_samples.py
+```
+
+### Run the pipeline
+
+From the project root:
+
+```bash
+# Default: read samples.csv, print CSV to stdout
+python detect_bugs.py
+
+# Write to file
+python detect_bugs.py samples.csv -o results.csv
+
+# Limit to first 5 rows (testing)
+python detect_bugs.py -n 5 -o results.csv
+
+# Without MCP (no doc lookup)
+python detect_bugs.py --no-mcp -o results.csv
+```
+
+### Output format
+
+Strict CSV with three columns:
+
+| Column     | Description |
+|-----------|-------------|
+| **ID**    | Sample ID (from input CSV or row index). |
+| **Bug Line** | 1-based line number where the bug first manifests; `0` if no bug. |
+| **Explanation** | Short explanation of the bug, grounded in MCP docs when available. |
+
+### MCP server URL
+
+By default the client connects to `http://localhost:8003/sse`. Override with:
+
+```env
+MCP_SERVER_URL=http://localhost:8003/sse
+```
+
+### Project layout (pipeline)
+
+```
+agents/
+├── parsing.py       # Code parsing agent
+├── mcp_client.py    # MCP client (search_documents)
+├── mcp_lookup.py    # MCP doc lookup agent
+├── detection.py     # Bug detection agent
+├── explanation.py   # Explanation generation agent
+└── orchestrator.py  # Pipeline orchestration
+server/
+├── mcp_server.py    # MCP server (run first)
+├── ingest_from_samples.py  # Ingest samples into index
+└── storage/         # Persisted vector index
+detect_bugs.py       # CLI entrypoint for pipeline
+samples.csv          # Input CSV (ID, Explanation, Context, Code, Correct Code)
+```
+
+### Evaluation
+
+Use `samples.csv` as the primary test set: run the pipeline on the **Code** column and compare **Bug Line** to ground truth (e.g. from a diff with **Correct Code**) and **Explanation** to the existing **Explanation** column. You can add a **Bug Line** column to the CSV later for ground truth.
+
+---
+
 ## How It Works
 
 ### Architecture
@@ -194,18 +291,31 @@ bug-hunter-ai/
 ├── agent_core/              # Core agent library
 │   ├── __init__.py
 │   └── llm_client.py       # Provider-agnostic LLM client
+├── agents/                  # C++ bug detection pipeline
+│   ├── parsing.py           # Code parsing agent
+│   ├── mcp_client.py        # MCP client
+│   ├── mcp_lookup.py        # MCP doc lookup agent
+│   ├── detection.py         # Bug detection agent
+│   ├── explanation.py       # Explanation generation agent
+│   └── orchestrator.py     # Pipeline + CSV output
 ├── converter/              # Example IoT project (WORKING_DIRECTORY)
 │   ├── temperature.py      # IoT device configuration (with bug)
-│   └── main.py            # Test harness
-├── docs/                   # Documentation directory
+│   └── main.py             # Test harness
+├── docs/                    # Documentation directory
 │   └── iot-language-spec/  # Place IoT language docs here
-├── functions/              # Tool implementations
+├── server/                  # MCP server + ingestion
+│   ├── mcp_server.py        # MCP server (SSE, port 8003)
+│   ├── ingest_from_samples.py
+│   └── storage/             # Vector index storage
+├── functions/               # Tool implementations (IoT agent)
 │   └── fn.py
-├── main.py                # CLI entry point
-├── prompts.py             # System prompt builder
-├── tools.py               # Tool schema definitions
-├── requirements.txt       # Python dependencies
-└── .env                   # Configuration (not in git)
+├── main.py                 # CLI entry point (IoT bug fixing)
+├── detect_bugs.py          # CLI entry point (C++ bug detection pipeline)
+├── prompts.py              # System prompt builder
+├── tools.py                # Tool schema definitions
+├── samples.csv             # Input for C++ pipeline (ID, Code, etc.)
+├── requirements.txt        # Python dependencies
+└── .env                    # Configuration (not in git)
 ```
 
 ## Key Components

@@ -14,3 +14,7 @@ dist/
 build/
 .pytest_cache/
 .coverage
+server/storage/
+server/embedding_model/
+test_output.txt
+results.csv

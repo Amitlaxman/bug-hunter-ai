@@ -1,7 +1,10 @@
 # Core dependencies for bug-hunter-ai
 python-dotenv>=1.0.0
 openai>=1.0.0
-# huggingface-hub
-llama-index==0.14.13
+
+# C++ bug detection pipeline (MCP client)
+fastmcp>=2.0.0
+
+# MCP server + ingestion (optional; for server/ and ingest script)
+llama-index>=0.14.0
 llama-index-embeddings-huggingface
-fastmcp
