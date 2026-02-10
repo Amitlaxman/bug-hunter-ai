@@ -32,40 +32,43 @@ def detect_bug(
     if mcp_chunks:
         doc_section = "\n\nRelevant RDI API Documentation & Bug Patterns:\n" + format_chunks_for_prompt(mcp_chunks, max_chars=3000)
 
-    system = """You are a C++/RDI (SmartRDI API) bug detection expert. 
-Your job is to identify the first line (1-based) where a bug manifests.
-Bugs include: wrong API usage, invalid constants, incorrect method order, or syntax errors.
+    system = """You are a C++/RDI (SmartRDI API) expert. 
+Your task is to identify the first line (1-based) where a bug manifests.
 
-You MUST reply in exactly this format:
-REASONING: <1-sentence description of the bug>
+RDI bugs often involve multi-line sequences:
+1. Missing prerequisite calls (e.g., calling burst() before begin()).
+2. Invalid order of operations (e.g., RDI_END() before RDI_BEGIN()).
+3. State conflicts across lines (e.g., setting a range on line 5 that makes line 10 invalid).
+4. Missing cleanup or synchronization.
+
+Analyze the ENTIRE sequence or block.
+Identify the first line that is WRONG or represents the start of the ERROR.
+
+Reply exactly in this format:
+REASONING: <1-sentence description of the logic error>
 BUG: YES
 LINE: <line_number>
 
-If you are absolutely certain there is no bug:
-REASONING: Code is correct.
-BUG: NO
-LINE: 0"""
+If no bug: BUG: NO, LINE: 0"""
 
-    user = f"""Review this C++ snippet for RDI API bugs.
+    user = f"""Analyze this RDI code snippet for sequential and logic bugs.
 {doc_section}
 
-Code to analyze:
+Code with Line Numbers:
 {code_with_lines}
 
-Identify the bug and the line number."""
+Identify the bug and the first line where the sequence fails."""
 
     try:
         client = make_client()
         model_name = os.getenv("MODEL", "gpt-4o-mini")
-        if verbose:
-            print(f"[Detection] Using model: {model_name}")
         response = client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            max_tokens=250,
+            max_tokens=100, # Reduced
         )
         content = (response.choices[0].message.content or "").strip()
         if verbose:

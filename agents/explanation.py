@@ -31,22 +31,22 @@ def generate_explanation(
     else:
         docs_instruction = "No documentation was found in the search. Do NOT cite any 'Doc' or 'Chunk'. Explain the bug based on general C++ knowledge or the internal reasoning provided."
 
-    system = f"""You are a C++/RDI bug explanation expert. Your task is to write a brief explanation of the bug that:
+    system = f"""You are an RDI expert. Write a 1-sentence explanation of the bug.
 1. {docs_instruction}
-2. Explains the error on the specific bug line.
-3. Incorporates the internal reasoning provided by the detection expert.
-4. Is 1-2 sentences only, suitable for a CSV column."""
+2. Incorporate the detection reasoning.
+3. Be remarkably concise. STRICTLY 1 SENTENCE. Maximum 60 words ONLY.
+4. Use format: BUG: <bug description> and do not cite chunk sources."""
 
-    reasoning_part = f"\nInternal detection reasoning: {detection_reasoning}\n" if detection_reasoning else ""
+    reasoning_part = f"\nReasoning: {detection_reasoning}\n" if detection_reasoning else ""
 
-    user = f"""Code snippet:
-{code[:2500]}
+    user = f"""Code:
+{code[:1000]}
 
-Bug first manifests on line: {bug_line}
+Line: {bug_line}
 {reasoning_part}
-{f"Documentation provided:\n{docs_text}" if docs_text else "No documentation available."}
+{f"Docs:\n{docs_text}" if docs_text else ""}
 
-Write the final Explanation:"""
+Write 1-sentence explanation:"""
 
     try:
         client = make_client()
@@ -56,7 +56,7 @@ Write the final Explanation:"""
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            max_tokens=150,
+            max_tokens=80, # Reduced
         )
         content = (response.choices[0].message.content or "").strip()
         return content.replace("\n", " ").strip() or "Bug on line {}.".format(bug_line)
