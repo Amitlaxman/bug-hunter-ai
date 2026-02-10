@@ -187,25 +187,6 @@ The agent uses a strict system prompt that:
 - References documentation when available
 - Responds only in English
 
-## Example: Fixing IoT Device Code
-
-The repository includes an example IoT device configuration bug:
-
-1. **Bug**: `converter/temperature.py` has `alert_threshold_c = 100` but should be `80`
-2. **Test**: `converter/main.py` validates the threshold value
-3. **Fix**: Run the agent to automatically fix it
-
-```bash
-python main.py "Fix the bug in temperature.py: alert_threshold_c must be 80°C" --verbose
-```
-
-The agent will:
-1. Read `temperature.py` to understand the configuration
-2. Identify the incorrect threshold value
-3. Update the file with the correct value
-4. Run `main.py` to verify the fix
-5. Confirm success when tests pass
-
 ## Project Structure
 
 ```
@@ -248,10 +229,7 @@ If you encounter rate limits, consider:
 
 Contributions welcome! Please feel free to submit issues or pull requests.
 
-## License
-
-[Add your license here]
 
 ## Links
 
-- Repository: https://github.com/cholakovit/bug-hunter-ai
+- Repository: https://github.com/Amitlaxman/bug-hunter-ai
