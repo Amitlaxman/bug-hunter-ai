@@ -112,17 +112,23 @@ def get_api_response(client, messages, tools, max_retries=5):
         except Exception as e:
             error_str = str(e)
             if "does not support tools" in error_str or "tool" in error_str.lower():
-                print(f"# Error: Model does not support function calling")
-                print(f"# Try a different model or install one that supports tools:")
-                print(f"#   ollama pull llama3.2:3b")
+                print(f"\n{'='*70}")
+                print("ERROR: Model does not support function calling")
+                print(f"{'='*70}")
+                print("Try a different model or install one that supports tools:")
+                print("   ollama pull llama3.2:3b")
+                print(f"{'='*70}\n")
                 return None
             if attempt < max_retries - 1:
                 wait_time = 2 ** attempt
-                print(f"# API error, retrying in {wait_time}s... ({attempt + 1}/{max_retries})")
+                print(f"API error, retrying in {wait_time}s... ({attempt + 1}/{max_retries})")
                 time.sleep(wait_time)
             else:
-                print(f"# Error: API unavailable after {max_retries} attempts")
-                print(f"# {e}")
+                print(f"\n{'='*70}")
+                print(f"ERROR: API unavailable after {max_retries} attempts")
+                print(f"{'='*70}")
+                print(f"   {e}")
+                print(f"{'='*70}\n")
                 return None
     return None
 
@@ -137,15 +143,32 @@ def parse_and_execute_text_tool_call(content, messages, working_directory, verbo
         except json.JSONDecodeError:
             fn_args = {}
 
-        print(f"# Calling function: {fn_name}")
+        print(f"\n{'='*70}")
+        print(f"TOOL CALL: {fn_name}")
+        print(f"{'='*70}")
         if verbose:
-            print(f"  Arguments: {fn_args}")
+            print(f"Arguments:")
+            print(f"   {json.dumps(fn_args, indent=2)}")
 
         result = call_tool(fn_name, fn_args, working_directory, verbose)
 
         if verbose:
             result_str = str(result)
-            print(f"  Result: {result_str[:200]}..." if len(result_str) > 200 else f"  Result: {result}")
+            if len(result_str) > 500:
+                print(f"Result (truncated, {len(result_str)} chars):")
+                print(f"   {result_str[:500]}...")
+            else:
+                print(f"Result:")
+                # Format multi-line results nicely
+                lines = result_str.split('\n')
+                if len(lines) > 1:
+                    for line in lines[:20]:  # Show first 20 lines
+                        print(f"   {line}")
+                    if len(lines) > 20:
+                        print(f"   ... ({len(lines) - 20} more lines)")
+                else:
+                    print(f"   {result_str}")
+        print(f"{'='*70}\n")
 
         messages.append({
             "role": "assistant",
@@ -157,26 +180,46 @@ def parse_and_execute_text_tool_call(content, messages, working_directory, verbo
         })
         return True
     else:
-        print("# Final response:")
+        print(f"\n{'='*70}")
+        print("FINAL RESPONSE")
+        print(f"{'='*70}")
         print(content)
+        print(f"{'='*70}\n")
         return False
 
 def handle_structured_tool_calls(message, messages, working_directory, verbose=False):
     messages.append(message)
 
-    for tool_call in message.tool_calls:
+    for idx, tool_call in enumerate(message.tool_calls, 1):
         fn_name = tool_call.function.name
         fn_args = json.loads(tool_call.function.arguments)
 
-        print(f"# Calling function: {fn_name}")
+        print(f"\n{'='*70}")
+        print(f"🔧 TOOL CALL #{idx}: {fn_name}")
+        print(f"{'='*70}")
         if verbose:
-            print(f"  Arguments: {fn_args}")
+            print(f"Arguments:")
+            print(f"   {json.dumps(fn_args, indent=2)}")
 
         result = call_tool(fn_name, fn_args, working_directory, verbose)
 
         if verbose:
             result_str = str(result)
-            print(f"  Result: {result_str[:200]}..." if len(result_str) > 200 else f"  Result: {result}")
+            if len(result_str) > 500:
+                print(f"Result (truncated, {len(result_str)} chars):")
+                print(f"   {result_str[:500]}...")
+            else:
+                print(f"Result:")
+                # Format multi-line results nicely
+                lines = result_str.split('\n')
+                if len(lines) > 1:
+                    for line in lines[:20]:  # Show first 20 lines
+                        print(f"   {line}")
+                    if len(lines) > 20:
+                        print(f"   ... ({len(lines) - 20} more lines)")
+                else:
+                    print(f"   {result_str}")
+        print(f"{'='*70}\n")
 
         messages.append({
             "role": "tool",
